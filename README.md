@@ -4,35 +4,34 @@
 [![Ubuntu](https://img.shields.io/badge/Linux-Ubuntu_Server_24.04-E95420?style=flat&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
 [![Focus](https://img.shields.io/badge/Focus-NOC_%2F_Sysadmin_%2F_Networking-blue?style=flat)]()
 
-Repositorio de prácticas de laboratorio, configuraciones de infraestructura y documentación técnica correspondiente al ciclo formativo de grado superior en **Administració de Sistemes Informàtics en Xarxa (ASIX)** en el **Institut TIC de Barcelona**.
+Repositorio centralizado de laboratorios prácticos, configuraciones de infraestructura, evidencias y guías de estudio del ciclo formativo de grado superior en **Administració de Sistemes Informàtics en Xarxa (ASIX)** en el **Institut TIC de Barcelona**.
 
 ---
 
-## 🗂️ Índice de Módulos y Laboratorios
+## 🗂️ Módulos y Laboratorios
 
 ### 🌐 M06 — Sistemes Operatius en Xarxa (SXI)
 
-* **[Pràctica 0: Servidor DHCP Bàsic](practiques/practica_0/MANUAL_PRACTICA_DHCP.md)**
-  * Configuración inicial de `isc-dhcp-server` en subred `192.168.1.0/24`.
-  * Asignación de rangos dinámicos, exclusión de IPs de infraestructura y reserva básica `pc1`.
+#### 🔹 [📡 ISC-DHCP Server Suite (Laboratorio Completo)](dhcp-server-lab/README.md)
+Despliegue integral de un servidor DHCP autoritativo en entorno virtualizado aislado (L2) con **IsardVDI**, configuración de pools dinámicos, políticas de seguridad anti-DoS, resolución de nombres y reservas fijas por dirección física (MAC).
 
-* **[Pràctica 1: Desplegament de Servidor DHCP Autoritatiu i Aïllament L2](practiques/practica_1/README.md)**  ⭐ *(Destacado con evidencias)*
-  * Servidor autoritativo con prevención de denegación de servicio (`deny declines; deny bootp;`).
-  * Asignación de IP estática con Netplan y amarre de interfaces del demonio.
-  * Jerarquía de directivas y sobreescritura de parámetros por Host (Isabel y Fernando).
-  * **Documentación complementaria:**
-    * 📋 [Guia Pràctica de Comandes (Català)](practiques/practica_1/GUIA_PRACTICA_P1_DHCP.md)
-    * 🧠 [Manual Teórico de Ingeniería: De Cimiento a Carretera (P0 + P1)](practiques/practica_1/MANUAL_TEORICO_DHCP_P0_P1.md)
-    * ❓ [Preguntes Teòriques de la Pràctica](practiques/practica_1/PREGUNTES_TEORIA_DHCP.md)
+* 📄 **Writeup Principal & Evidencias:** [dhcp-server-lab/README.md](dhcp-server-lab/README.md) *(con capturas reales del ciclo DORA, sockets y base de datos de leases)*.
+* ⚙️ **Configuraciones listas:** [dhcp-server-lab/configs/](dhcp-server-lab/configs/) (`dhcpd.conf`, `iface-enp3s0.yaml`, `isc-dhcp-server`).
+* 📚 **Documentación técnica:**
+  * 📋 [Guia Pràctica de Comandes (Català)](dhcp-server-lab/docs/GUIA_PRACTICA_P1.md) — Para ejecución y entrega de clase.
+  * 🧠 [Manual Teórico de Ingeniería: De Cimiento a Carretera (P0 + P1)](dhcp-server-lab/docs/MANUAL_TEORICO_INGENIERIA.md) — Fundamentos desde KVM y kernel hasta RFC 2131.
+  * ❓ [Preguntas y Respuestas Teóricas](dhcp-server-lab/docs/PREGUNTAS_EXAMEN_DHCP.md) — 10 preguntas obligatorias de examen.
+  * 📑 [Laboratorio Previo (Práctica 0)](dhcp-server-lab/docs/P0_MANUAL_PRACTICA_DHCP.md) — Setup elemental y reservas iniciales.
+* 📂 **Material original de clase:** [dhcp-server-lab/classroom_materials/](dhcp-server-lab/classroom_materials/) *(PDFs y enunciados)*.
 
 ---
 
-## 🛠️ Entorno de Laboratorio
+## 🛠️ Entorno y Stack Tecnológico
 
-* **Hipervisor:** IsardVDI (KVM/QEMU)
+* **Hipervisor & Virtualización:** IsardVDI (KVM / QEMU / Linux Bridges)
 * **Sistemas Operativos:** Ubuntu Server 24.04 LTS (CLI)
-* **Gestión de Red:** Netplan (`systemd-networkd`) & ISC DHCP (`dhcpd`)
-* **Herramientas de diagnóstico:** `ss`, `journalctl`, `iproute2`, `dhclient`, `resolvectl`
+* **Gestión de Red L3/L4:** Netplan (`systemd-networkd`), ISC-DHCP (`dhcpd`)
+* **Herramientas de diagnóstico & auditoría:** `iproute2`, `ss`, `journalctl`, `dhclient`, `resolvectl`
 
 ---
 *Mantenido por **Bo Hao Zhang**.*
