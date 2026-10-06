@@ -1,0 +1,19 @@
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Editors & IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Virtual machine disk images & isos (Safety hygiene)
+*.vdi
+*.vmdk
+*.qcow2
+*.iso
+*.ova
+*.box

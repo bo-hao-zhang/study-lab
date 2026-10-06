@@ -1,0 +1,5 @@
+# Defaults for isc-dhcp-server (IPv4 & IPv6 interface bindings)
+# On what interfaces should the DHCP server (dhcpd) serve DHCP requests?
+# Separate multiple interfaces with spaces, e.g. "eth0 eth1".
+INTERFACESv4="enp3s0"
+INTERFACESv6=""
