@@ -17,3 +17,8 @@ Desktop.ini
 *.iso
 *.ova
 *.box
+
+# Raw classroom PDFs & auxiliary local drafts (kept local, clean GitHub)
+*.pdf
+dhcp-server-lab/docs/
+dhcp-server-lab/classroom_materials/

@@ -5,15 +5,29 @@
 [![Network](https://img.shields.io/badge/Network-Netplan_%2F_systemd--networkd-informational?style=flat)]()
 [![Academic](https://img.shields.io/badge/Institut_TIC_de_Barcelona-2º_ASIX-lightgrey?style=flat)](https://agora.xtec.cat/itb/)
 
-> 📌 **Contexto del Proyecto:**  
-> Este repositorio documenta la **Pràctica 1 (Serveis DHCP)** del módulo **M06 (Sistemes Operatius en Xarxa)** en el **Institut TIC de Barcelona** (2º curso de ASIX).  
-> El objetivo es desplegar y verificar un servidor DHCP autoritativo en Linux (`isc-dhcp-server`) dentro de una red virtual privada y aislada (`Personal1`), evitando cualquier fuga de paquetes o conflicto en la red física del centro educativo, implementando pools dinámicos, reservas estáticas por MAC y verificando el ciclo DORA completo en clientes por línea de comandos (CLI).
+---
+
+## 🎯 1. ¿Qué estamos haciendo?
+
+Implementar y validar un **servidor DHCP autoritativo** en Linux (**Ubuntu Server 24.04**) utilizando el paquete estándar de la industria `isc-dhcp-server`.  
+El laboratorio provee direccionamiento dinámico automático, opciones de red (Default Gateway, DNS corporativos, sufijo de dominio) y reservas estáticas vinculadas a direcciones físicas (MAC) para clientes Linux en línea de comandos (CLI).
 
 ---
 
-## 🗺️ Topología de Red y Arquitectura
+## 💡 2. ¿Por qué lo hacemos?
 
-El laboratorio se ha implementado sobre la plataforma de virtualización **IsardVDI** (KVM/QEMU) con dos máquinas virtuales interconectadas:
+1. **Automatización de direccionamiento IP:** Configurar direccionamiento estático host por host en una infraestructura empresarial es inviable y propenso a errores humanos o colisiones de IP.
+2. **Aislamiento estricto de Capa 2 (Seguridad):** En un entorno compartido como el aula del instituto, encender un servidor DHCP en una red física (*bridged*) provocaría un incidente de **Rogue DHCP**, interceptando peticiones y dejando sin salida a Internet a los compañeros. Por eso, el laboratorio se aísla en el switch virtual `Personal1` de IsardVDI.
+3. **Servidor Autoritativo (`authoritative`):** Evita la coexistencia de configuraciones erróneas. Si un cliente solicita una IP obsoleta o ajena al segmento, el servidor responde con un `DHCPNAK` forzando una renovación limpia desde cero.
+4. **Políticas de control y seguridad L7:** Mitigar riesgos comunes como ataques por agotamiento de pool (`deny declines`) y descartar protocolos antiguos sin temporizadores (`deny bootp`).
+
+---
+
+## 🛠️ 3. ¿Cómo lo hemos hecho?
+
+### Topología y Arquitectura de Red
+
+El escenario se monta en **IsardVDI** (KVM/QEMU) con dos máquinas virtuales interconectadas por un switch virtual privado:
 
 ```mermaid
 flowchart LR
@@ -36,26 +50,25 @@ flowchart LR
         end
 
         SRV_LAN <-->|"Socket UDP 67/68"| SwitchVirtual
-        SwitchVirtual <-->|"Petición DORA"| CLI_LAN
+        SwitchVirtual <-->|"Negociación DORA"| CLI_LAN
     end
 ```
 
-### Tabla de Direccionamiento
-| Elemento | Interfaz | IP / Rango | Propósito |
+### Matriz de Direccionamiento
+| Elemento | Interfaz | IP / Rango | Función |
 | :--- | :--- | :--- | :--- |
-| **Ubuntu Server** | `enp3s0` | `192.168.1.2/24` | IP estática fija del servidor DHCP |
-| **Virtual Gateway** | - | `192.168.1.1` | Puerta de enlace entregada vía Option 3 |
-| **Pool Dinámico** | `Personal1` | `192.168.1.100 - .200` | Rango de concesión para clientes generales |
+| **Ubuntu Server** | `enp3s0` | `192.168.1.2/24` | IP fija del servidor (Netplan) |
+| **Virtual Gateway** | - | `192.168.1.1` | Puerta de enlace enviada vía Option 3 |
+| **Pool Dinámico** | `Personal1` | `192.168.1.100 - .200` | Rango para clientes genéricos |
 | **Reserva 'Isabel'** | MAC `00:00:45:12:EE:F4` | `192.168.1.21` | Reserva con lease permanente (`-1`) |
-| **Reserva 'Fernando'**| MAC `00:00:45:13:1E:44` | `192.168.1.22` | Reserva con DNS específico (`192.168.1.20`) |
+| **Reserva 'Fernando'**| MAC `00:00:45:13:1E:44` | `192.168.1.22` | Reserva con DNS propio (`192.168.1.20`) |
 
 ---
 
-## ⚙️ Implementación y Ficheros de Configuración
+### Configuración Aplicada
 
-### 1. IP Estática con Netplan en el Servidor
-Para que el servidor pueda repartir direcciones en la red privada, su propia IP debe ser inmutable. En [`configs/iface-enp3s0.yaml`](configs/iface-enp3s0.yaml):
-
+#### 1. IP Estática del Servidor ([`configs/iface-enp3s0.yaml`](configs/iface-enp3s0.yaml))
+El servidor nunca puede depender de DHCP en su tarjeta de servicio:
 ```yaml
 network:
   version: 2
@@ -66,21 +79,17 @@ network:
       addresses:
         - 192.168.1.2/24
 ```
-*Se aplica con `sudo netplan apply` comprobando con `ip -br a`.*
 
-### 2. Amarre de Interfaces en el Demonio
-Para evitar escuchar peticiones en la red de gestión o en la de salida a Internet, en [`configs/isc-dhcp-server`](configs/isc-dhcp-server) se limita la escucha a `enp3s0`:
-
+#### 2. Amarre de Interfaces ([`configs/isc-dhcp-server`](configs/isc-dhcp-server))
+Asegura que el demonio solo procese tráfico en la red privada `Personal1`:
 ```bash
 INTERFACESv4="enp3s0"
 INTERFACESv6=""
 ```
 
-### 3. Fichero Principal de Reglas (`/etc/dhcp/dhcpd.conf`)
-Fichero central [`configs/dhcpd.conf`](configs/dhcpd.conf) con opciones globales, seguridad, pool dinámico y reservas:
-
+#### 3. Reglas y Reservas ([`configs/dhcpd.conf`](configs/dhcpd.conf))
 ```text
-# Parámetros globales y autoridad
+# Parámetros Globales
 authoritative;
 one-lease-per-client on;
 default-lease-time 600;
@@ -93,7 +102,7 @@ ddns-update-style none;
 deny declines;
 deny bootp;
 
-# Subred y Rango
+# Subred y Pool Dinámico
 subnet 192.168.1.0 netmask 255.255.255.0 {
     range 192.168.1.100 192.168.1.200;
     option broadcast-address 192.168.1.255;
@@ -101,7 +110,7 @@ subnet 192.168.1.0 netmask 255.255.255.0 {
     option subnet-mask 255.255.255.0;
 }
 
-# Reservas de Hosts
+# Reservas por MAC
 host Isabel {
     hardware ethernet 00:00:45:12:EE:F4;
     fixed-address 192.168.1.21;
@@ -119,78 +128,75 @@ host Fernando {
 
 ---
 
-## 📸 Evidencias Técnicas y Validación en Vivo
+## 📊 4. Resultados y Verificación Técnica
 
-### 1. Comprobación del Servicio y Enlace de Socket en el Servidor
-Verificación con `systemctl status` demostrando que el proceso está activo y enlazado al socket de red en `enp3s0`:
+### Evidencia 1: Demonio Activo y Socket a la Escucha
+Verificación en el servidor de que `dhcpd` está corriendo y escuchando en el puerto UDP 67 sobre `enp3s0`:
 
 ![Estado del Servicio ISC-DHCP](img/01_server_service_status.png)
 
-> **Lectura técnica:** El proceso `dhcpd[798]` inicializa el servicio, carga la base de datos de leases y se pone a la escucha en `LPF/enp3s0/52:54:00:19:98:53/192.168.1.0/24`.
+* Proceso `dhcpd[798]` en estado `active (running)`.
+* Socket abierto en `LPF/enp3s0/52:54:00:19:98:53/192.168.1.0/24`.
 
 ---
 
-### 2. Trazabilidad del Ciclo DORA en el Cliente CLI
-Ejecutando `sudo dhclient -r enp3s0 && sudo dhclient -v enp3s0` en la máquina cliente:
+### Evidencia 2: Negociación del Ciclo DORA en el Cliente
+En la máquina cliente, solicitando IP mediante `sudo dhclient -r enp3s0 && sudo dhclient -v enp3s0`:
 
 ![Negociación DORA en Cliente](img/02_client_dora_negotiation.png)
 
-> **Lectura técnica:**
-> 1. `DHCPDISCOVER`: El cliente difunde por broadcast al puerto 67 pidiendo configuración.
-> 2. `DHCPOFFER`: El servidor `192.168.1.2` ofrece la IP disponible `192.168.1.100`.
-> 3. `DHCPREQUEST`: El cliente confirma y formaliza la petición para `192.168.1.100`.
-> 4. `DHCPACK`: El servidor sella la concesión con un tiempo de renovación de 251 segundos (la mitad del lease efectivo negociado).
+1. **`DHCPDISCOVER`:** El cliente envía difusión buscando servidor en el puerto 67.
+2. **`DHCPOFFER`:** El servidor `192.168.1.2` ofrece la dirección libre `192.168.1.100`.
+3. **`DHCPREQUEST`:** El cliente solicita formalmente la IP ofrecida.
+4. **`DHCPACK`:** El servidor valida la concesión (`bound to 192.168.1.100`, renovación programada a los 251s).
 
 ---
 
-### 3. Verificación de Parámetros Recibidos en el Cliente
-Comprobando que el cliente no solo recibió IP, sino Gateway y servidores DNS corporativos:
+### Evidencia 3: Validación de Parámetros en el Sistema Cliente
+Comprobando que el stack de red del cliente aplicó correctamente la IP, Gateway y DNS:
 
 ![Verificación de Parámetros de Red](img/03_client_network_verification.png)
 
-> **Lectura técnica:**
-> * `ip -br a`: Interfaz `enp3s0` en estado UP con la IP `192.168.1.100/24`.
-> * `ip route`: Puerta de enlace por defecto agregada: `default via 192.168.1.1 dev enp3s0`.
-> * `resolvectl`: Servidores DNS configurados (`192.168.1.10`, `192.168.1.11`) bajo el sufijo de dominio `aula53.asir`.
+* **Direccionamiento:** `enp3s0` con `192.168.1.100/24`.
+* **Tabla de rutas:** Ruta por defecto aplicada (`default via 192.168.1.1 dev enp3s0`).
+* **Resolución DNS (`resolvectl`):** Servidores `192.168.1.10` y `192.168.1.11` bajo el dominio `aula53.asir`.
 
 ---
 
-### 4. Base de Datos de Concesiones en el Servidor
-Lectura del archivo `/var/lib/dhcp/dhcpd.leases` en el servidor:
+### Evidencia 4: Registro Transaccional en Base de Datos de Leases
+Inspección de `/var/lib/dhcp/dhcpd.leases` en el servidor:
 
 ![Base de Datos de Leases](img/04_server_lease_database.png)
 
-> **Lectura técnica:** Se comprueba el registro transaccional con la entrada `lease 192.168.1.100`, estado `binding state active`, vinculando la MAC `52:54:00:3c:b2:e1` y el hostname `isardvdi`.
+* El contrato queda persistido en disco con la MAC física del cliente (`52:54:00:3c:b2:e1`), estado `binding state active` y hostname `isardvdi`.
 
 ---
 
-## 🛠️ Notas de Laboratorio y Troubleshooting Real
+## 🔧 5. Troubleshooting Real
 
-Durante el laboratorio surgieron varios detalles prácticos reales propios del entorno de pruebas:
-
-1. **Interfaz en estado `DOWN` en el cliente:**  
-   Al arrancar la máquina cliente, la tarjeta de prácticas aparecía administrativamente apagada (`enp3s0 DOWN`). Hubo que activarla manualmente con `sudo ip link set enp3s0 up` antes de poder solicitar IP.
-2. **Ausencia de `dhclient` en Ubuntu reciente:**  
-   Las plantillas modernas de Ubuntu Server ya no incluyen `dhclient` por defecto (usan `systemd-networkd` o Netplan). Para forzar y visualizar el proceso detallado DORA en consola, se instaló el cliente con `sudo apt install isc-dhcp-client -y`.
-3. **Sintaxis de reservas:**  
-   En la guía del ejercicio se mencionaba la directiva como `maquinari ethernet`; sin embargo, la sintaxis oficial de ISC-DHCP requiere obligatoriamente `hardware ethernet` en inglés, de lo contrario `dhcpd -t` aborta el arranque por error sintáctico.
+1. **Interfaz del cliente en estado `DOWN`:**  
+   Al arrancar la máquina cliente, la tarjeta de prácticas no tenía enlace administrativo. Se levantó con `sudo ip link set enp3s0 up` antes de solicitar IP.
+2. **Ausencia de cliente DHCP tradicional:**  
+   En Ubuntu Server actual no se incluye `dhclient` de serie. Se instaló `isc-dhcp-client` para auditar la traza DORA explícita con el flag `-v`.
+3. **Corrección de sintaxis en reservas:**  
+   La directiva oficial en ISC-DHCP es obligatoriamente `hardware ethernet` en inglés (la traducción no es válida para el parser de `dhcpd`).
 
 ---
 
-## 📁 Estructura del Repositorio
+## 📂 Archivos del Laboratorio
 
 ```text
-├── README.md                           # Documentación principal del laboratorio
+├── README.md                           # Informe técnico completo del laboratorio
 ├── configs/
-│   ├── iface-enp3s0.yaml               # Fichero Netplan del servidor
-│   ├── isc-dhcp-server                 # Definición de interfaces del demonio
-│   └── dhcpd.conf                      # Configuración central de ISC-DHCP
+│   ├── iface-enp3s0.yaml               # Configuración Netplan del servidor
+│   ├── isc-dhcp-server                 # Interfaz de escucha del demonio
+│   └── dhcpd.conf                      # Reglas, pool dinámico y reservas
 └── img/
-    ├── 01_server_service_status.png    # Evidencia: Estado y socket del servidor
-    ├── 02_client_dora_negotiation.png  # Evidencia: Handshake DORA en cliente
-    ├── 03_client_network_verification.png # Evidencia: Verificación IP, Gateway y DNS
-    └── 04_server_lease_database.png    # Evidencia: Registro activo en dhcpd.leases
+    ├── 01_server_service_status.png    # Evidencia: Socket y proceso
+    ├── 02_client_dora_negotiation.png  # Evidencia: Ciclo DORA
+    ├── 03_client_network_verification.png # Evidencia: IP, ruta y DNS
+    └── 04_server_lease_database.png    # Evidencia: Registro de concesiones
 ```
 
 ---
-*Laboratorio realizado y documentado por **Bo Hao Zhang** — Estudiante de ASIX / ASIR en el Institut TIC de Barcelona.*
+*Laboratorio documentado por **Bo Hao Zhang** — 2º ASIX, Institut TIC de Barcelona.*

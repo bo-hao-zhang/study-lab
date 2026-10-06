@@ -4,34 +4,21 @@
 [![Ubuntu](https://img.shields.io/badge/Linux-Ubuntu_Server_24.04-E95420?style=flat&logo=ubuntu&logoColor=white)](https://ubuntu.com/)
 [![Focus](https://img.shields.io/badge/Focus-NOC_%2F_Sysadmin_%2F_Networking-blue?style=flat)]()
 
-Repositorio centralizado de laboratorios prácticos, configuraciones de infraestructura, evidencias y guías de estudio del ciclo formativo de grado superior en **Administració de Sistemes Informàtics en Xarxa (ASIX)** en el **Institut TIC de Barcelona**.
+Repositorio de laboratorios prácticos de infraestructura, redes y sistemas correspondientes a **2º de ASIX** en el **Institut TIC de Barcelona**.
 
 ---
 
-## 🗂️ Módulos y Laboratorios
+## 🗂️ Laboratorios de Infraestructura
 
-### 🌐 M06 — Sistemes Operatius en Xarxa (SXI)
+### 🌐 [📡 Despliegue de Servidor DHCP Autoritativo (`isc-dhcp-server`)](dhcp-server-lab/)
+Despliegue y verificación en entorno virtualizado aislado (L2) con **IsardVDI**:
+* **¿Qué es?:** Servidor DHCP autoritativo en Ubuntu Server 24.04 con pools dinámicos y reservas por hardware (MAC).
+* **¿Por qué?:** Aislamiento estricto de Capa 2 para evitar problemas de *Rogue DHCP* en la red física, políticas de lease y protección anti-DoS (`deny declines; deny bootp;`).
+* **¿Cómo?:** Netplan estático en servidor, amarre de sockets en `/etc/default/isc-dhcp-server` y reglas en `/etc/dhcp/dhcpd.conf`.
+* **Resultados:** Trazabilidad completa del ciclo DORA en cliente CLI, inspección de sockets UDP 67 y validación de concesiones en disco.
 
-#### 🔹 [📡 ISC-DHCP Server Suite (Laboratorio Completo)](dhcp-server-lab/README.md)
-Despliegue integral de un servidor DHCP autoritativo en entorno virtualizado aislado (L2) con **IsardVDI**, configuración de pools dinámicos, políticas de seguridad anti-DoS, resolución de nombres y reservas fijas por dirección física (MAC).
-
-* 📄 **Writeup Principal & Evidencias:** [dhcp-server-lab/README.md](dhcp-server-lab/README.md) *(con capturas reales del ciclo DORA, sockets y base de datos de leases)*.
-* ⚙️ **Configuraciones listas:** [dhcp-server-lab/configs/](dhcp-server-lab/configs/) (`dhcpd.conf`, `iface-enp3s0.yaml`, `isc-dhcp-server`).
-* 📚 **Documentación técnica:**
-  * 📋 [Guia Pràctica de Comandes (Català)](dhcp-server-lab/docs/GUIA_PRACTICA_P1.md) — Para ejecución y entrega de clase.
-  * 🧠 [Manual Teórico de Ingeniería: De Cimiento a Carretera (P0 + P1)](dhcp-server-lab/docs/MANUAL_TEORICO_INGENIERIA.md) — Fundamentos desde KVM y kernel hasta RFC 2131.
-  * ❓ [Preguntas y Respuestas Teóricas](dhcp-server-lab/docs/PREGUNTAS_EXAMEN_DHCP.md) — 10 preguntas obligatorias de examen.
-  * 📑 [Laboratorio Previo (Práctica 0)](dhcp-server-lab/docs/P0_MANUAL_PRACTICA_DHCP.md) — Setup elemental y reservas iniciales.
-* 📂 **Material original de clase:** [dhcp-server-lab/classroom_materials/](dhcp-server-lab/classroom_materials/) *(PDFs y enunciados)*.
+👉 **[Ver Informe Completo con Evidencias en `dhcp-server-lab/`](dhcp-server-lab/)**
 
 ---
 
-## 🛠️ Entorno y Stack Tecnológico
-
-* **Hipervisor & Virtualización:** IsardVDI (KVM / QEMU / Linux Bridges)
-* **Sistemas Operativos:** Ubuntu Server 24.04 LTS (CLI)
-* **Gestión de Red L3/L4:** Netplan (`systemd-networkd`), ISC-DHCP (`dhcpd`)
-* **Herramientas de diagnóstico & auditoría:** `iproute2`, `ss`, `journalctl`, `dhclient`, `resolvectl`
-
----
 *Mantenido por **Bo Hao Zhang**.*
